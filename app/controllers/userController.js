@@ -12,8 +12,10 @@ const AuthModel = mongoose.model('Auth')
 /* Models */
 const UserModel = mongoose.model('User')
 const IssueModel = mongoose.model('Issue')
-const CommentModel = mongoose.model('Comment')
 
+const CommentsModel = mongoose.model('Comments')
+
+const Watcher1Model = mongoose.model('Watch1')
 
 /* Get all user Details */
 let getAllUser = (req, res) => {
@@ -88,12 +90,100 @@ let getSingleUser = (req, res) => {
 }// end get single user
 
 /* Get single user details */
+let getIssueReporter = (req, res) => {
+    IssueModel.find({ 'reporter': req.params.receiverName })
+        .select('-password -__v -_id')
+        .sort('-created')
+        .lean()
+        .limit(10)
+        .skip(parseInt(req.query.skip) || 0)
+        .exec((err, result) => {
+            if (err) {
+                console.log(err)
+                logger.error(err.message, 'User Controller: getSingleUser', 10)
+                let apiResponse = response.generate(true, 'Failed To Find User Details', 500, null)
+                res.send(apiResponse)
+            } else if (check.isEmpty(result)) {
+                logger.info('No User Found', 'User Controller:getSingleUser')
+                let apiResponse = response.generate(true, 'No User Found', 404, null)
+                res.send(apiResponse)
+            } else {
+                let apiResponse = response.generate(false, 'User Details Found', 200, result)
+                res.send(apiResponse)
+            }
+        })
+}// end get issue reporter details
+
+/**
+ * function to retrieve chat of the user.
+ * params: receiverId, senderId, skip.
+ */
+let getUsersIssue = (req, res) => {
+    // function to validate params.
+    let validateParams = () => {
+      return new Promise((resolve, reject) => {
+        if (check.isEmpty(req.query.receiverName)) {
+          logger.info('parameters missing', 'getUsersIssue handler', 9)
+          let apiResponse = response.generate(true, 'parameters missing.', 403, null)
+          reject(apiResponse)
+        } else {
+          resolve()
+        }
+      })
+    } // end of the validateParams function.
+  
+    // function to get chats.
+    let findIssues = () => {
+      return new Promise((resolve, reject) => {
+        
+      
+        IssueModel.find({ 'assignedTo': req.query.receiverName })
+          .select('-_id -__v')
+          .sort('-created')
+          .skip(parseInt(req.query.skip) || 0)
+          .lean()
+          .limit(5)
+          .exec((err, result) => {
+            if (err) {
+              console.log(err)
+              logger.error(err.message, 'User Controller: getUsersIssue', 10)
+              let apiResponse = response.generate(true, `error occurred: ${err.message}`, 500, null)
+              reject(apiResponse)
+            } else if (check.isEmpty(result)) {
+              logger.info('No Issue Found', 'User Controller: getUsersIssue')
+              let apiResponse = response.generate(true, 'No Issue Found', 404, null)
+              reject(apiResponse)
+            } else {
+              console.log('issue found and listed.')
+  
+              // reversing array.
+              let reverseResult = result.reverse()
+  
+              resolve(result)
+            }
+          })
+      })
+    } // end of the findChats function.
+  
+    // making promise call.
+    validateParams()
+      .then(findIssues)
+      .then((result) => {
+        let apiResponse = response.generate(false, 'All Issues Listed', 200, result)
+        res.send(apiResponse)
+      })
+      .catch((error) => {
+        res.send(error)
+      })
+  } // end of the getUsersIssue function.
+
+/* Get single user details */
 let getSingleIssue = (req, res) => {
     IssueModel.find({ 'issueId': req.params.issueId })
         .select('-password -__v -_id')
         .sort('-created')
         .lean()
-        .limit(10)
+        .limit()
         .skip(parseInt(req.query.skip) || 0)
         .exec((err, result) => {
             if (err) {
@@ -114,11 +204,11 @@ let getSingleIssue = (req, res) => {
 
 /* Get comment details */
 let getComments = (req, res) => {
-    CommentModel.find({ 'issueId': req.params.issueId })
+    CommentsModel.find({ 'issueId': req.params.issueId })
         .select('-password -__v -_id')
         .sort('-created')
         .lean()
-        .limit(10)
+        .limit()
         .exec((err, result) => {
             if (err) {
                 console.log(err)
@@ -136,6 +226,58 @@ let getComments = (req, res) => {
         })
 }// end get comment details
 
+/* Get comment details */
+let getIssueWatcher = (req, res) => {
+    Watcher1Model.find({ 'watcher': req.params.receiverName })
+        .select('-password -__v -_id')
+        .sort('-created')
+        .lean()
+        .limit()
+        .exec((err, result) => {
+            if (err) {
+                console.log(err)
+                logger.error(err.message, 'User Controller: getComments', 10)
+                let apiResponse = response.generate(true, 'Failed To Find Comment Details', 500, null)
+                res.send(apiResponse)
+            } else if (check.isEmpty(result)) {
+                logger.info('No Comment Found', 'User Controller:getComments')
+                let apiResponse = response.generate(true, 'No Comment Found', 404, null)
+                res.send(apiResponse)
+            } else {
+                let apiResponse = response.generate(false, 'Comment Details Found', 200, result)
+                res.send(apiResponse)
+            }
+        })
+}// end get comment details
+
+/* Get watcher details */
+let getWatcher = (req, res) => {
+
+    //issue = req.params.issueId
+   // Watcher1Model.distinct({ 'issueId': req.params.issueId })
+    Watcher1Model.aggregate([ { $match:{issueId : req.params.issueId}} ,
+        { $group : { _id: "$watcher" }}])  
+   // .select('-password -__v -_id')
+        //.sort('-created')
+     //   .lean()
+       // .limit(10)
+        .exec((err, result) => {
+            if (err) {
+                console.log(err)
+                logger.error(err.message, 'User Controller: getWatcher', 10)
+                let apiResponse = response.generate(true, 'Failed To Find Watcher Details', 500, null)
+                res.send(apiResponse)
+            } else if (check.isEmpty(result)) {
+                logger.info('No Watcher Found', 'User Controller:getWatcher')
+                let apiResponse = response.generate(true, 'No Watcher Found', 404, null)
+                res.send(apiResponse)
+            } else {
+                let apiResponse = response.generate(false, 'Watcher Details Found', 200, result)
+                res.send(apiResponse)
+            }
+        })
+}// end get watcher details
+
 /* Get single search details */
 let getSingleSearch = (req, res) => {
     IssueModel.find( { $or:[{'assignedTo': req.params.issueData } , { 'title': req.params.issueData }
@@ -146,6 +288,8 @@ let getSingleSearch = (req, res) => {
         .select('-password -__v -_id')
         .sort('-created')
         .lean()
+        .limit()
+        .skip(parseInt(req.query.skip) || 0)
         .exec((err, result) => {
             if (err) {
                 console.log(err)
@@ -542,7 +686,7 @@ let createComment = (req, res) => {
                 var today = Date.now()
                 let commentId = shortid.generate()
 
-                let newIssue = new CommentModel({
+                let newIssue = new CommentsModel({
 
                     commentId: commentId,
                     comment: req.body.comment,
@@ -575,7 +719,7 @@ let createComment = (req, res) => {
     // making promise call.
     commentCreationFunction()
         .then((result) => {
-            let apiResponse = response.generate(false, 'Issue Created successfully', 200, result)
+            let apiResponse = response.generate(false, 'Comment Created successfully', 200, result)
             res.send(apiResponse)
         })
         .catch((error) => {
@@ -584,6 +728,66 @@ let createComment = (req, res) => {
         })
 }
 
+
+/**
+ * function to create watcher.
+ */
+let createWatcher = (req, res) => {
+    let issueWatcherFunction = () => {
+        return new Promise((resolve, reject) => {
+            console.log(req.body)
+            if (check.isEmpty(req.body.watcher)|| 
+            check.isEmpty(req.body.issueId) ) {
+
+                console.log("403, forbidden request");
+                let apiResponse = response.generate(true, 'required parameters are missing', 403, null)
+                reject(apiResponse)
+            } else {
+
+                var today = Date.now()
+                let watcherId = shortid.generate()
+
+                let newIssue = new Watcher1Model({
+
+                    watcherId: watcherId,
+                    watcher: req.body.watcher,
+                    
+                    issueId : req.body.issueId,
+
+                    
+                   
+                    created: today,
+                    lastModified: today
+                }) // end new issue model
+
+                
+
+                newIssue.save((err, result) => {
+                    if (err) {
+                        console.log('Error Occured.')
+                        logger.error(`Error Occured : ${err}`, 'Database', 10)
+                        let apiResponse = response.generate(true, 'Error Occured.', 500, null)
+                        reject(apiResponse)
+                    } else {
+                        console.log('Success in adding watcher')
+                        resolve(result)
+                    }
+                }) // end new watcher save
+            }
+        }) // end new watcher promise
+    } // end create watcher function
+
+    // making promise call.
+    issueWatcherFunction()
+        .then((result) => {
+            let apiResponse = response.generate(false, 'Watcher added successfully', 200, result)
+            res.send(apiResponse)
+        })
+        .catch((error) => {
+            console.log(error)
+            res.send(error)
+        })
+}
 
 
 /**
@@ -627,14 +831,19 @@ module.exports = {
 
     signUpFunction: signUpFunction,
     getSingleSearch: getSingleSearch,
+    getIssueReporter: getIssueReporter,
+    getIssueWatcher: getIssueWatcher,
     getAllIssue: getAllIssue,
     createIssue: createIssue,
     createComment: createComment,
+    getUsersIssue : getUsersIssue,
+    createWatcher : createWatcher,
     editIssue: editIssue,
     deleteUser: deleteUser,
     getSingleUser: getSingleUser,
     getSingleIssue: getSingleIssue,
     getComments : getComments,
+    getWatcher : getWatcher,
     loginFunction: loginFunction,
     logout: logout
 

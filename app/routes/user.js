@@ -17,11 +17,19 @@ module.exports.setRouter = (app) => {
 
    app.get(`${baseUrl}/:receiverName/details`, auth.isAuthorized, userController.getSingleUser);
 
+   app.get(`${baseUrl}/:receiverName/reporterDetails`, auth.isAuthorized, userController.getIssueReporter);
+
+   app.get(`${baseUrl}/get/for/user`,  userController.getUsersIssue);
+
    app.get(`${baseUrl}/:issueId`,  userController.getSingleIssue);
 
    app.get(`${baseUrl}/:issueData/search`, auth.isAuthorized, userController.getSingleSearch);
 
    app.get(`${baseUrl}/:issueId/commentDetails`,  userController.getComments);
+
+   app.get(`${baseUrl}/:issueId/watcherDetails`,  userController.getWatcher);
+
+   app.get(`${baseUrl}/:receiverName/issueWatcherDetails`,  userController.getIssueWatcher);
 
    
     // params: firstName, lastName, email, mobileNumber, password, apiKey.
@@ -30,6 +38,8 @@ module.exports.setRouter = (app) => {
     app.post(`${baseUrl}/create`,  userController.createIssue);
 
     app.post(`${baseUrl}/comment`,  userController.createComment);
+
+    app.post(`${baseUrl}/watcher`,  userController.createWatcher);
 
     
 

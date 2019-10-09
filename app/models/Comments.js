@@ -4,7 +4,7 @@ const mongoose = require('mongoose')
 //import schema
 const Schema = mongoose.Schema;
 
-let commentSchema = new Schema (
+let commentsSchema = new Schema (
     {
         
         commenter : {
@@ -35,4 +35,4 @@ let commentSchema = new Schema (
     }
 )
 
-mongoose.model('Comment', commentSchema);
+mongoose.model('Comments', commentsSchema);
